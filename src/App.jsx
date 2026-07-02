@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { toast } from 'react-hot-toast';
+import LandingPage from './components/LandingPage';
 import AuthScreen from './components/AuthScreen';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -10,7 +11,7 @@ import Conselheiro from './components/Conselheiro';
 import GraficoEvolucao from './components/GraficoEvolucao';
 import MetaPoupanca from './components/MetaPoupanca';
 import SimuladorOrcamento from './components/SimuladorOrcamento';
-import { HelpCircle, ShieldAlert, Home } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Home, ArrowLeft } from 'lucide-react';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -20,6 +21,10 @@ export default function App() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  // Landing Page controlo
+  const [showLanding, setShowLanding] = useState(true);
+  const [showAuthForm, setShowAuthForm] = useState(false);
 
   // Controlo do modal global de perfil
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -33,7 +38,6 @@ export default function App() {
 
   const knownAchievements = useRef(new Set());
 
-  // Sincronizar campos do form local quando o profile carregar do Supabase ou LocalStorage
   useEffect(() => {
     if (profile) {
       setCargo(profile.cargo || '');
@@ -48,13 +52,19 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) setIsDemoMode(false);
+      if (session) {
+        setIsDemoMode(false);
+        setShowLanding(false);
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) setIsDemoMode(false);
+      if (session) {
+        setIsDemoMode(false);
+        setShowLanding(false);
+      }
     });
 
     return () => { subscription.unsubscribe(); };
@@ -200,6 +210,15 @@ export default function App() {
     const { error } = await supabase.from('profiles').update({ meta_poupanca: valor }).eq('id', session.user.id);
     if (error) { toast.error('Erro ao guardar a meta.'); return; }
     toast.success('Meta de poupança atualizada!');
+    
+    if (valor > 0) {
+      await supabase.from('achievements').insert({
+        profile_id: session.user.id,
+        nome_conquista: 'Planeador Ativo',
+        descricao: 'Definiu uma meta de poupança ativa no seu perfil!'
+      }).select();
+    }
+    
     await fetchSupabaseData();
   };
 
@@ -208,6 +227,15 @@ export default function App() {
     const { error } = await supabase.from('profiles').update(fields).eq('id', session.user.id);
     if (error) { toast.error('Erro ao salvar perfil.'); return; }
     toast.success('Perfil atualizado com sucesso!');
+    
+    if (fields.meta_poupanca > 0) {
+      await supabase.from('achievements').insert({
+        profile_id: session.user.id,
+        nome_conquista: 'Planeador Ativo',
+        descricao: 'Definiu uma meta de poupança ativa no seu perfil!'
+      }).select();
+    }
+
     await fetchSupabaseData();
   };
 
@@ -215,6 +243,8 @@ export default function App() {
     setLoading(true);
     await supabase.auth.signOut();
     setIsDemoMode(false);
+    setShowLanding(true);
+    setShowAuthForm(false);
     setLoading(false);
   };
 
@@ -290,6 +320,13 @@ export default function App() {
     if (novoSaldo >= 500) addAchievement('Mestre do Mealheiro', 'Alcançou o nível máximo com um saldo de 500€ ou mais!');
     if (novoSaldo >= 1000) addAchievement('Imperador do Mealheiro', 'Alcançou o topo absoluto do sistema com 1000€ ou mais!');
 
+    const vMeta = parseFloat(profile?.meta_poupanca || 0);
+    if (vMeta > 0) {
+      addAchievement('Planeador Ativo', 'Definiu uma meta de poupança ativa no seu perfil!');
+      if (novoSaldo >= (vMeta * 0.5)) addAchievement('Meio Caminho', 'Alcançou metade ou mais do valor da meta de poupança configurada!');
+      if (novoSaldo >= vMeta) addAchievement('Alvo Atingido', 'Atingiu 100% da meta de poupança estabelecida no seu perfil!');
+    }
+
     toast.success(tipo === 'entrada'
       ? `✅ Depósito de ${valor.toFixed(2)} € registado!`
       : `📤 Levantamento de ${valor.toFixed(2)} € registado!`
@@ -329,19 +366,54 @@ export default function App() {
 
   const handleSetMetaDemo = (valor) => {
     const novoProfile = { ...profile, meta_poupanca: valor };
+    const currentAch = [...achievements];
+    const addAchievement = (name, desc) => {
+      if (!currentAch.find(a => a.nome_conquista === name)) {
+        currentAch.push({ id: crypto.randomUUID(), profile_id: 'demo-user-id', nome_conquista: name, descricao: desc, ganha_em: new Date().toISOString() });
+        toast.success(`🏆 Conquista desbloqueada: "${name}"!`, { duration: 5000 });
+      }
+    };
+
+    if (valor > 0) {
+      addAchievement('Planeador Ativo', 'Definiu uma meta de poupança ativa no seu perfil!');
+    }
+
     localStorage.setItem('demo_profile', JSON.stringify(novoProfile));
+    localStorage.setItem('demo_achievements', JSON.stringify(currentAch));
     setProfile(novoProfile);
+    setAchievements(currentAch);
     toast.success('Meta de poupança atualizada!');
   };
 
   const handleUpdateProfileDemo = (fields) => {
     const novoProfile = { ...profile, ...fields };
+    const currentAch = [...achievements];
+    const addAchievement = (name, desc) => {
+      if (!currentAch.find(a => a.nome_conquista === name)) {
+        currentAch.push({ id: crypto.randomUUID(), profile_id: 'demo-user-id', nome_conquista: name, descricao: desc, ganha_em: new Date().toISOString() });
+        toast.success(`🏆 Conquista desbloqueada: "${name}"!`, { duration: 5000 });
+      }
+    };
+
+    if (fields.meta_poupanca > 0) {
+      addAchievement('Planeador Ativo', 'Definiu uma meta de poupança ativa no seu perfil!');
+      const currentSaldo = parseFloat(profile?.saldo_total || 0);
+      if (currentSaldo >= (fields.meta_poupanca * 0.5)) addAchievement('Meio Caminho', 'Alcançou metade ou mais do valor da meta de poupança configurada!');
+      if (currentSaldo >= fields.meta_poupanca) addAchievement('Alvo Atingido', 'Atingiu 100% da meta de poupança estabelecida no seu perfil!');
+    }
+
     localStorage.setItem('demo_profile', JSON.stringify(novoProfile));
+    localStorage.setItem('demo_achievements', JSON.stringify(currentAch));
     setProfile(novoProfile);
-    toast.success('Perfil atualizado com sucesso!');
+    setAchievements(currentAch);
+    toast.success('Perfil updated!');
   };
 
-  const handleSignOutDemo = () => { setIsDemoMode(false); };
+  const handleSignOutDemo = () => {
+    setIsDemoMode(false);
+    setShowLanding(true);
+    setShowAuthForm(false);
+  };
 
   const activeAddTransaction = isDemoMode ? handleAddTransactionDemo : handleAddTransactionReal;
   const activeDeleteTransaction = isDemoMode ? handleDeleteTransactionDemo : handleDeleteTransactionReal;
@@ -379,8 +451,32 @@ export default function App() {
     );
   }
 
-  if (!session && !isDemoMode) {
-    return <AuthScreen onDemoMode={() => setIsDemoMode(true)} />;
+  // 1. Mostrar Landing Page inicial
+  if (showLanding && !session && !isDemoMode) {
+    return (
+      <LandingPage
+        onEnterApp={() => { setShowLanding(false); setShowAuthForm(true); }}
+        onEnterDemo={() => { setIsDemoMode(true); setShowLanding(false); }}
+      />
+    );
+  }
+
+  // 2. Mostrar Tela de Login (com botão de regresso à Landing)
+  if (!session && !isDemoMode && showAuthForm) {
+    return (
+      <div className="min-h-screen bg-darkBg flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
+        <div className="absolute top-6 left-6 z-10">
+          <button
+            onClick={() => { setShowLanding(true); setShowAuthForm(false); }}
+            className="flex items-center space-x-2 text-slate-400 hover:text-slate-200 text-xs font-bold transition cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar ao Início</span>
+          </button>
+        </div>
+        <AuthScreen onDemoMode={() => setIsDemoMode(true)} />
+      </div>
+    );
   }
 
   return (
@@ -523,7 +619,7 @@ export default function App() {
       )}
 
       <footer className="bg-darkCard/50 border-t border-darkBorder py-6 text-center text-xs text-slate-500">
-        <p>&copy; {new Date().getFullYear()} SaveLance - Gestor de Mealheiro Digital. Criado para Provas de Aptidão Profissional (PAP).</p>
+        <p>&copy; {new Date().getFullYear()} SaveLance - Gestor de Mealheiro Digital. Desenvolvido como projeto pessoal de poupança.</p>
       </footer>
     </div>
   );
