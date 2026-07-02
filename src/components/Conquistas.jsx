@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Lock, Sparkles, Trophy, ShieldAlert, BadgeCheck } from 'lucide-react';
+import { Award, Lock, Sparkles, Trophy, BadgeCheck, ShieldAlert } from 'lucide-react';
 
 export default function Conquistas({ achievements }) {
   const allAchievements = [
@@ -30,9 +30,17 @@ export default function Conquistas({ achievements }) {
     {
       key: 'Mestre do Mealheiro',
       title: 'Mestre do Mealheiro',
-      req: 'Alcançar o nível máximo (Nível 5) com um saldo igual ou superior a 500.00 €.',
+      req: 'Alcançar um saldo igual ou superior a 500.00 €.',
       icon: BadgeCheck,
-      color: 'from-yellow-400 to-techGreen',
+      color: 'from-yellow-400 to-amber-500',
+      glow: 'rgba(234, 179, 8, 0.4)',
+    },
+    {
+      key: 'Imperador do Mealheiro',
+      title: 'Imperador do Mealheiro',
+      req: 'Alcançar o topo absoluto com um saldo igual ou superior a 1000.00 €.',
+      icon: Trophy,
+      color: 'from-emerald-400 to-techGreen',
       glow: 'rgba(0, 255, 102, 0.4)',
     },
   ];
