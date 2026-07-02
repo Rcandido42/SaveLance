@@ -11,6 +11,9 @@ import Conselheiro from './components/Conselheiro';
 import GraficoEvolucao from './components/GraficoEvolucao';
 import MetaPoupanca from './components/MetaPoupanca';
 import SimuladorOrcamento from './components/SimuladorOrcamento';
+import SimuladorJuros from './components/SimuladorJuros';
+import Cofres from './components/Cofres';
+import Subscricoes from './components/Subscricoes';
 import { HelpCircle, ShieldAlert, Home, ArrowLeft } from 'lucide-react';
 
 export default function App() {
@@ -150,7 +153,9 @@ export default function App() {
               rendimento_mensal: 0.00,
               despesas_fixas: 0.00,
               meta_prazo_meses: 3,
-              estilo_construcao: 'futurista'
+              estilo_construcao: 'futurista',
+              cofres: [],
+              subscricoes: []
             })
             .select().single();
           if (createErr) throw createErr;
@@ -269,7 +274,9 @@ export default function App() {
         rendimento_mensal: 0.00,
         despesas_fixas: 0.00,
         meta_prazo_meses: 3,
-        estilo_construcao: 'futurista'
+        estilo_construcao: 'futurista',
+        cofres: [],
+        subscricoes: []
       };
       setProfile(initialProfile);
       setTransactions([]);
@@ -382,7 +389,7 @@ export default function App() {
     localStorage.setItem('demo_achievements', JSON.stringify(currentAch));
     setProfile(novoProfile);
     setAchievements(currentAch);
-    toast.success('Meta de poupança atualizada!');
+    toast.success('Meta de poupança updated!');
   };
 
   const handleUpdateProfileDemo = (fields) => {
@@ -406,7 +413,7 @@ export default function App() {
     localStorage.setItem('demo_achievements', JSON.stringify(currentAch));
     setProfile(novoProfile);
     setAchievements(currentAch);
-    toast.success('Perfil updated!');
+    toast.success('Perfil atualizado com sucesso!');
   };
 
   const handleSignOutDemo = () => {
@@ -451,7 +458,6 @@ export default function App() {
     );
   }
 
-  // 1. Mostrar Landing Page inicial
   if (showLanding && !session && !isDemoMode) {
     return (
       <LandingPage
@@ -461,7 +467,6 @@ export default function App() {
     );
   }
 
-  // 2. Mostrar Tela de Login (com botão de regresso à Landing)
   if (!session && !isDemoMode && showAuthForm) {
     return (
       <div className="min-h-screen bg-darkBg flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
@@ -507,12 +512,20 @@ export default function App() {
         )}
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-          <div className="xl:col-span-2">
+          
+          {/* Coluna Larga Esquerda */}
+          <div className="xl:col-span-2 space-y-8">
             <Dashboard
               profile={profile}
               onAddTransaction={activeAddTransaction}
             />
+            <GraficoEvolucao transactions={transactions} />
+            <Historico transactions={transactions} onDeleteTransaction={activeDeleteTransaction} />
+            <SimuladorJuros />
+            <Subscricoes profile={profile} onUpdateProfile={activeUpdateProfile} />
           </div>
+
+          {/* Barra Lateral Direita */}
           <div className="space-y-6">
             <MetaPoupanca
               saldo={profile?.saldo_total || 0}
@@ -523,6 +536,12 @@ export default function App() {
               profile={profile}
               saldo={profile?.saldo_total || 0}
             />
+            <Cofres
+              profile={profile}
+              onUpdateProfile={activeUpdateProfile}
+              onAddTransaction={activeAddTransaction}
+            />
+            <Conquistas achievements={achievements} />
             <Conselheiro />
             <div className="bg-gradient-to-tr from-techPurple/10 to-techCyan/10 p-5 rounded-2xl border border-darkBorder flex items-start space-x-3 text-xs text-slate-300">
               <HelpCircle className="h-5 w-5 text-techCyan shrink-0 mt-0.5" />
@@ -534,17 +553,7 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div>
 
-        <GraficoEvolucao transactions={transactions} />
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <div className="xl:col-span-2">
-            <Historico transactions={transactions} onDeleteTransaction={activeDeleteTransaction} />
-          </div>
-          <div>
-            <Conquistas achievements={achievements} />
-          </div>
         </div>
 
       </main>
