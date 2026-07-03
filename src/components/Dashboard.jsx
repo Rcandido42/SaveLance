@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Minus, Euro, Cpu, Zap, Activity, Info, Home, Sun, Layers } from 'lucide-react';
+import { Plus, Minus, Euro, Cpu, Zap, Activity, Info, Home, Sun, Layers, Wallet, Lock, Landmark } from 'lucide-react';
 import { CATEGORIAS } from '../lib/categorias';
 
 export default function Dashboard({ profile, onAddTransaction }) {
@@ -13,9 +13,26 @@ export default function Dashboard({ profile, onAddTransaction }) {
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
 
-  const saldo = profile?.saldo_total || 0;
+  const saldoLivre = profile?.saldo_total || 0; // O saldo que sobrou fora das poupanças
   const nivel = profile?.nivel_construcao || 1;
   const estilo = profile?.estilo_construcao || 'futurista';
+  const cofres = profile?.cofres || [];
+
+  // Calcular poupanças totais (soma de todos os cofres)
+  const totalPoupancas = cofres.reduce((acc, c) => acc + parseFloat(c.saldo || 0), 0.00);
+
+  // Saldo da Conta Bancária (Total = Saldo Disponível para gastar + Poupanças acumuladas)
+  const saldoContaBancaria = saldoLivre + totalPoupancas;
+
+  // Custo de horas de trabalho (Rendimento do Perfil)
+  const salarioMensal = parseFloat(profile?.rendimento_mensal || 0);
+  const valorHora = salarioMensal > 0 ? (salarioMensal / 160) : 0; // Estimativa padrão de 160h por mês
+
+  const getHoursEquivalent = () => {
+    const valFloat = parseFloat(valor);
+    if (isNaN(valFloat) || valFloat <= 0 || valorHora <= 0) return 0;
+    return (valFloat / valorHora).toFixed(1);
+  };
 
   const getLevelDetails = (lvl, style) => {
     const styleName = {
@@ -58,7 +75,7 @@ export default function Dashboard({ profile, onAddTransaction }) {
     setValidationError('');
     const parsedVal = parseFloat(valor);
     if (isNaN(parsedVal) || parsedVal <= 0) { setValidationError('Insira um valor numérico válido superior a zero.'); return; }
-    if (modalType === 'saida' && parsedVal > saldo) { setValidationError('Saldo insuficiente para realizar este levantamento.'); return; }
+    if (modalType === 'saida' && parsedVal > saldoLivre) { setValidationError('Saldo livre para gastar insuficiente.'); return; }
     setSubmitting(true);
     try {
       await onAddTransaction(parsedVal, modalType, descricao, categoria || 'Outros');
@@ -134,7 +151,7 @@ export default function Dashboard({ profile, onAddTransaction }) {
           {nivel >= 3 && <div className="absolute bottom-10 w-36 h-20 flex justify-between px-2"><div className="w-6 h-full bg-slate-600 border border-slate-700"></div><div className="w-6 h-full bg-slate-600 border border-slate-700"></div></div>}
           {nivel >= 4 && <div className="absolute bottom-10 left-[72px] w-[112px] h-[44px] bg-slate-700 border border-slate-800 rounded-t flex items-end justify-center animate-scale-up"><div className="w-10 h-8 bg-amber-950 border-t border-x border-amber-900 rounded-t flex items-center justify-center"><div className="w-0.5 h-6 bg-slate-900 mx-0.5"></div><div className="w-0.5 h-6 bg-slate-900 mx-0.5"></div></div></div>}
           {nivel >= 5 && <div className="absolute bottom-[54px] left-[66px] w-[124px] h-2 bg-slate-600 border border-slate-700 rounded animate-scale-up"></div>}
-          {nivel >= 6 && <div className="absolute bottom-[56px] left-[60px] w-[136px] h-12 flex justify-between"><div className="w-6 h-full bg-slate-600 border border-slate-700 animate-scale-up"></div><div className="w-6 h-full bg-slate-600 border border-slate-700 animate-scale-up"></div></div>}
+          {nivel >= 6 && <div className="absolute bottom-[56px] left-[60px]. w-[136px] h-12 flex justify-between"><div className="w-6 h-full bg-slate-600 border border-slate-700 animate-scale-up"></div><div className="w-6 h-full bg-slate-600 border border-slate-700 animate-scale-up"></div></div>}
           {nivel >= 7 && <div className="absolute bottom-[104px] left-[56px] w-[144px] h-6 flex justify-between"><div className="w-8 h-full bg-red-800 border-b border-red-900 rounded-t animate-scale-up" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div><div className="w-8 h-full bg-red-800 border-b border-red-900 rounded-t animate-scale-up" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div></div>}
           {nivel >= 8 && <div className="absolute bottom-[124px] left-[68px] w-0.5 h-10 bg-slate-400 flex items-start justify-start animate-fade-in"><div className="w-4 h-3 bg-red-650 rounded-r"></div></div>}
           {nivel >= 9 && <div className="absolute bottom-4 left-[96px] w-12 h-2.5 bg-gradient-to-r from-blue-700 to-indigo-900 rounded shadow-md animate-scale-up"></div>}
@@ -163,6 +180,59 @@ export default function Dashboard({ profile, onAddTransaction }) {
 
   return (
     <div className="space-y-8">
+      {/* Reestruturação dos Saldos (Dashboard) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* Card 1: Saldo Conta Bancária */}
+        <div className="bg-darkCard p-6 rounded-2xl border border-darkBorder shadow-md relative overflow-hidden flex flex-col justify-center">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-techCyan/5 rounded-full blur-2xl pointer-events-none"></div>
+          <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+            <Landmark className="h-4 w-4 text-techCyan" />
+            <span>Saldo da Conta</span>
+          </div>
+          <div className="flex items-baseline space-x-1">
+            <span className="text-3xl font-black text-slate-100">
+              {saldoContaBancaria.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-lg font-extrabold text-techCyan">€</span>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-2">Património total no mealheiro.</p>
+        </div>
+
+        {/* Card 2: Poupanças Totais */}
+        <div className="bg-darkCard p-6 rounded-2xl border border-darkBorder shadow-md relative overflow-hidden flex flex-col justify-center">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-techPurple/5 rounded-full blur-2xl pointer-events-none"></div>
+          <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+            <Lock className="h-4 w-4 text-techPurple" />
+            <span>Poupanças Guardadas</span>
+          </div>
+          <div className="flex items-baseline space-x-1">
+            <span className="text-3xl font-black text-slate-100">
+              {totalPoupancas.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-lg font-extrabold text-techPurple">€</span>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-2">Saldo total alocado nos teus cofres.</p>
+        </div>
+
+        {/* Card 3: Saldo Disponível para Gastar */}
+        <div className="bg-darkCard p-6 rounded-2xl border border-darkBorder shadow-md relative overflow-hidden flex flex-col justify-center ring-1 ring-techGreen/30">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-techGreen/5 rounded-full blur-2xl pointer-events-none"></div>
+          <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-450 uppercase tracking-widest mb-1">
+            <Wallet className="h-4 w-4 text-techGreen" />
+            <span>Disponível para Gastar</span>
+          </div>
+          <div className="flex items-baseline space-x-1">
+            <span className="text-3xl font-black text-slate-100">
+              {saldoLivre.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            <span className="text-lg font-extrabold text-techGreen">€</span>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-2">Saldo livre que podes gastar à vontade.</p>
+        </div>
+
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
 
         <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
@@ -170,34 +240,28 @@ export default function Dashboard({ profile, onAddTransaction }) {
             <div className="absolute top-0 right-0 w-32 h-32 bg-techCyan/5 rounded-full blur-3xl pointer-events-none"></div>
             <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2">
               <Activity className="h-4 w-4 text-techCyan" />
-              <span>Saldo Disponível</span>
+              <span>Movimentar Saldo Livre</span>
             </div>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                {saldo.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <span className="text-3xl font-bold text-techCyan">€</span>
-            </div>
-            <p className="mt-4 text-sm text-slate-400 border-t border-darkBorder/50 pt-4">
-              Progresso de construção dinâmico baseado no saldo.
+            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+              Deposita ou retira fundos do teu saldo disponível para gastar. O progresso da tua moradia ajusta-se automaticamente.
             </p>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => openTransactionModal('entrada')}
-              className="flex items-center justify-center space-x-2 bg-gradient-to-r from-techGreen/20 to-techGreen/40 hover:from-techGreen/30 hover:to-techGreen/50 border border-techGreen/40 hover:border-techGreen text-techGreen font-bold py-4 px-6 rounded-xl transition-all duration-200 glow-green-hover shadow-sm cursor-pointer"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Depositar</span>
-            </button>
-            <button
-              onClick={() => openTransactionModal('saida')}
-              className="flex items-center justify-center space-x-2 bg-gradient-to-r from-red-500/10 to-red-500/30 hover:from-red-500/20 hover:to-red-500/40 border border-red-500/30 hover:border-red-500 text-red-400 font-bold py-4 px-6 rounded-xl transition-all duration-200 cursor-pointer"
-            >
-              <Minus className="h-5 w-5" />
-              <span>Retirar</span>
-            </button>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => openTransactionModal('entrada')}
+                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-techGreen/20 to-techGreen/40 hover:from-techGreen/30 hover:to-techGreen/50 border border-techGreen/40 hover:border-techGreen text-techGreen font-bold py-4 px-6 rounded-xl transition-all duration-200 glow-green-hover shadow-sm cursor-pointer"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Depositar</span>
+              </button>
+              <button
+                onClick={() => openTransactionModal('saida')}
+                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-red-500/10 to-red-500/30 hover:from-red-500/20 hover:to-red-500/40 border border-red-500/30 hover:border-red-500 text-red-400 font-bold py-4 px-6 rounded-xl transition-all duration-200 cursor-pointer"
+              >
+                <Minus className="h-5 w-5" />
+                <span>Retirar</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -285,6 +349,14 @@ export default function Dashboard({ profile, onAddTransaction }) {
                       className="block w-full pl-10 pr-3 py-3 border border-darkBorder rounded-xl bg-darkBg text-slate-200 focus:outline-none focus:ring-2 focus:ring-techCyan focus:border-transparent text-sm"
                     />
                   </div>
+
+                  {/* Valor-Hora Calculadora Feedback */}
+                  {modalType === 'saida' && valorHora > 0 && valor > 0 && (
+                    <div className="mt-2 text-[11px] text-amber-500 font-bold bg-amber-950/15 border border-amber-500/20 p-2 rounded-lg flex items-center space-x-1.5">
+                      <Info className="h-4.5 w-4.5 shrink-0 text-amber-500" />
+                      <span>Este levantamento equivale a cerca de <strong className="text-slate-200 text-xs">{getHoursEquivalent()} horas</strong> do teu trabalho.</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>

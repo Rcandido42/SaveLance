@@ -14,6 +14,9 @@ import SimuladorOrcamento from './components/SimuladorOrcamento';
 import SimuladorJuros from './components/SimuladorJuros';
 import Cofres from './components/Cofres';
 import Subscricoes from './components/Subscricoes';
+import SimuladorHabitos from './components/SimuladorHabitos';
+import SimuladorIRS from './components/SimuladorIRS';
+import NoSpendDays from './components/NoSpendDays';
 import { HelpCircle, ShieldAlert, Home, ArrowLeft } from 'lucide-react';
 
 export default function App() {
@@ -155,7 +158,8 @@ export default function App() {
               meta_prazo_meses: 3,
               estilo_construcao: 'futurista',
               cofres: [],
-              subscricoes: []
+              subscricoes: [],
+              dias_sem_gastar: []
             })
             .select().single();
           if (createErr) throw createErr;
@@ -276,7 +280,8 @@ export default function App() {
         meta_prazo_meses: 3,
         estilo_construcao: 'futurista',
         cofres: [],
-        subscricoes: []
+        subscricoes: [],
+        dias_sem_gastar: []
       };
       setProfile(initialProfile);
       setTransactions([]);
@@ -523,6 +528,9 @@ export default function App() {
             <Historico transactions={transactions} onDeleteTransaction={activeDeleteTransaction} />
             <SimuladorJuros />
             <Subscricoes profile={profile} onUpdateProfile={activeUpdateProfile} />
+            <SimuladorHabitos />
+            <SimuladorIRS />
+            <NoSpendDays profile={profile} onUpdateProfile={activeUpdateProfile} />
           </div>
 
           {/* Barra Lateral Direita */}
